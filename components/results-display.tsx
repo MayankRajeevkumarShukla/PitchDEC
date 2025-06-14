@@ -1,16 +1,45 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, AlertTriangle } from "lucide-react"
+import {
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  TrendingUp,
+  ThumbsDown,
+  Lightbulb,
+  Target,
+  BarChart3,
+} from "lucide-react"
 
 interface ResultsDisplayProps {
   results: {
     rating?: number
     feedback?: Record<string, string>
     rawResponse?: string
+    summary?: string
+    strengths?: string[]
+    weaknesses?: string[]
+    nextSteps?: string[]
+    comparableCompanies?: string[]
+    riskAssessment?: Record<string, "High" | "Medium" | "Low">
+    stage?: string
+    investmentReadiness?: string
+    sectionRatings?: Record<string, number>
   }
 }
 
@@ -24,90 +53,149 @@ export default function ResultsDisplay({ results }: ResultsDisplayProps) {
     return "bg-red-500"
   }
 
-  const getRatingIcon = (rating?: number) => {
-    if (!rating) return null
-    if (rating >= 8) return <CheckCircle className="h-5 w-5" />
-    if (rating >= 6) return <AlertTriangle className="h-5 w-5" />
-    return <AlertCircle className="h-5 w-5" />
+  const getRiskColor = (level: "High" | "Medium" | "Low") => {
+    return level === "High"
+      ? "bg-red-500"
+      : level === "Medium"
+      ? "bg-amber-500"
+      : "bg-emerald-500"
   }
 
   return (
-    <Card>
+    <Card className="shadow-xl rounded-xl">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Analysis Results</CardTitle>
+          <CardTitle>Pitch Deck Analysis</CardTitle>
           {results.rating !== undefined && (
-            <Badge className={`text-white ${getRatingColor(results.rating)}`}>Score: {results.rating}/10</Badge>
+            <Badge className={`text-white ${getRatingColor(results.rating)} px-3 py-1`}>
+              Score: {results.rating}/10
+            </Badge>
           )}
         </div>
-        <CardDescription>AI-powered feedback on your pitch deck</CardDescription>
+        <CardDescription>Evaluation across 9 pitch sections and risk factors</CardDescription>
       </CardHeader>
+
       <CardContent>
         <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
+          <TabsList className="mb-6 gap-4">
             <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="detailed">Detailed Feedback</TabsTrigger>
-            {results.rawResponse && <TabsTrigger value="raw">Raw Response</TabsTrigger>}
+            <TabsTrigger value="sections">Section Scores</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="risks">Risk & Stage</TabsTrigger>
+            {results.rawResponse && <TabsTrigger value="raw">Raw</TabsTrigger>}
           </TabsList>
 
+          {/* SUMMARY */}
           <TabsContent value="summary">
             <div className="space-y-4">
-              {results.rating !== undefined && (
-                <div className="flex items-center justify-center p-6 bg-gray-50 rounded-lg">
-                  <div className="text-center">
-                    <div
-                      className={`inline-flex items-center justify-center h-24 w-24 rounded-full ${getRatingColor(results.rating)} text-white mb-4`}
-                    >
-                      <div className="text-3xl font-bold">{results.rating}/10</div>
-                    </div>
-                    <p className="text-lg font-medium">Overall Rating</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {results.rating >= 8
-                        ? "Excellent pitch deck!"
-                        : results.rating >= 6
-                          ? "Good pitch with room for improvement"
-                          : "Needs significant improvement"}
-                    </p>
-                  </div>
+              <div className="text-center">
+                <div
+                  className={`inline-flex items-center justify-center h-24 w-24 rounded-full ${getRatingColor(results.rating)} text-white mb-4`}
+                >
+                  <span className="text-3xl font-bold">{results.rating}/10</span>
                 </div>
-              )}
+                <p className="text-lg font-semibold">Overall Rating</p>
+                <p className="text-sm text-gray-500">{results.investmentReadiness}</p>
+              </div>
 
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Summary</h4>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{results.summary}</p>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* SECTION SCORES */}
+          <TabsContent value="sections">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {results.sectionRatings &&
+                Object.entries(results.sectionRatings).map(([section, score]) => (
+                  <div
+                    key={section}
+                    className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border"
+                  >
+                    <span className="capitalize text-sm font-medium">
+                      {section.replace(/_/g, " ")}
+                    </span>
+                    <Badge className={`text-white ${getRatingColor(score)} px-2 py-1`}>
+                      {score}/10
+                    </Badge>
+                  </div>
+                ))}
+            </div>
+          </TabsContent>
+
+          {/* INSIGHTS */}
+          <TabsContent value="insights">
+            <div className="space-y-6">
+              {/* Strengths */}
               <div>
-                <h3 className="text-lg font-medium mb-2">Key Takeaways</h3>
-                <ul className="list-disc pl-5 space-y-1">
-                  {results.feedback &&
-                    Object.entries(results.feedback)
-                      .slice(0, 3)
-                      .map(([section, feedback]) => (
-                        <li key={section} className="text-sm">
-                          <span className="font-medium">{section.replace(/_/g, " ")}:</span> {feedback}
-                        </li>
-                      ))}
+                <h4 className="text-md font-semibold flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" /> Strengths
+                </h4>
+                <ul className="list-disc ml-5 text-sm text-green-700">
+                  {results.strengths?.map((s, i) => <li key={i}>{s}</li>)}
+                </ul>
+              </div>
+
+              {/* Weaknesses */}
+              <div>
+                <h4 className="text-md font-semibold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> Critical Weaknesses
+                </h4>
+                <ul className="list-disc ml-5 text-sm text-red-700">
+                  {results.weaknesses?.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+
+              {/* Next Steps */}
+              <div>
+                <h4 className="text-md font-semibold flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4" /> Next Steps
+                </h4>
+                <ul className="list-disc ml-5 text-sm text-gray-800">
+                  {results.nextSteps?.map((step, i) => <li key={i}>{step}</li>)}
+                </ul>
+              </div>
+
+              {/* Comparable Companies */}
+              <div>
+                <h4 className="text-md font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" /> Comparable Companies
+                </h4>
+                <ul className="list-disc ml-5 text-sm text-blue-800">
+                  {results.comparableCompanies?.map((c, i) => <li key={i}>{c}</li>)}
                 </ul>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="detailed">
-            <div className="space-y-4">
-              {results.feedback &&
-                Object.entries(results.feedback).map(([section, feedback]) => (
-                  <div key={section} className="border-b pb-3 last:border-b-0">
-                    <h3 className="font-medium capitalize mb-1">{section.replace(/_/g, " ")}</h3>
-                    <p className="text-sm text-gray-700">{feedback}</p>
+          {/* RISK & STAGE */}
+          <TabsContent value="risks">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {results.riskAssessment &&
+                Object.entries(results.riskAssessment).map(([type, level]) => (
+                  <div
+                    key={type}
+                    className={`rounded-lg px-4 py-3 text-white ${getRiskColor(level)} flex justify-between items-center`}
+                  >
+                    <span className="capitalize font-medium">{type.replace(/_/g, " ")} risk</span>
+                    <span className="text-sm font-bold uppercase">{level}</span>
                   </div>
                 ))}
+            </div>
 
-              {(!results.feedback || Object.keys(results.feedback).length === 0) && (
-                <p className="text-gray-500 italic">No detailed feedback available</p>
-              )}
+            <div className="mt-6">
+              <h4 className="text-md font-semibold">Stage</h4>
+              <p className="text-sm text-gray-700">{results.stage}</p>
             </div>
           </TabsContent>
 
+          {/* RAW */}
           {results.rawResponse && (
             <TabsContent value="raw">
-              <div className="bg-gray-50 p-4 rounded-md">
-                <pre className="text-xs overflow-auto whitespace-pre-wrap">
+              <div className="bg-gray-100 p-4 rounded-md max-h-96 overflow-auto">
+                <pre className="text-xs whitespace-pre-wrap break-words text-gray-800">
                   {typeof results.rawResponse === "string"
                     ? results.rawResponse
                     : JSON.stringify(results.rawResponse, null, 2)}
