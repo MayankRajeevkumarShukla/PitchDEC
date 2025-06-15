@@ -7,7 +7,7 @@ export async function analyzePitchDeck(sections: Record<string, string>): Promis
     .map(([title, content]) => `### ${title.replace(/_/g, " ").toUpperCase()}\n${content}`)
     .join("\n\n")
 
- const prompt = `
+  const prompt = `
 You are a senior venture capital partner with 15+ years of experience evaluating startup pitch decks. You've seen over 10,000 pitches and invested in 200+ companies, with notable exits including several unicorns.
 
 EVALUATION FRAMEWORK:
@@ -74,6 +74,8 @@ ANALYSIS REQUIREMENTS:
 - Consider stage-appropriate expectations (pre-seed vs Series A)
 - Flag any red flags or concerning elements
 
+IMPORTANT: Respond with VALID JSON only. No markdown, no backticks, no additional text. Start directly with { and end with }.
+
 OUTPUT FORMAT:
 {
   "overall_rating": 6.8,
@@ -123,10 +125,10 @@ OUTPUT FORMAT:
     "Technical approach reminiscent of [Company Y] with better market positioning"
   ],
   "risk_assessment": {
-    "execution_risk": "High - No proven traction",
-    "market_risk": "Medium - Large market but competitive",
-    "team_risk": "Low - Experienced founders",
-    "technology_risk": "Medium - Unproven scalability"
+    "execution_risk": "High",
+    "market_risk": "Medium",
+    "team_risk": "Low",
+    "technology_risk": "Medium"
   }
 }
 
@@ -155,7 +157,17 @@ ${sectionText}
     }
 
     const data = await response.json()
-    return data.choices[0].message.content
+    const rawContent = data.choices[0].message.content
+    
+    // Parse the JSON response
+    try {
+      const parsedResult = JSON.parse(rawContent)
+      return parsedResult
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError)
+      console.error("Raw response:", rawContent)
+      throw new Error("Failed to parse AI response as JSON")
+    }
   } catch (error: any) {
     console.error("GROQ API error:", error)
     throw new Error(error.message || "Failed to analyze with GROQ API")
