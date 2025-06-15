@@ -75,4 +75,5 @@ async function parseHTML(file: File): Promise<string> {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = htmlContent;
   return tempDiv.textContent || tempDiv.innerText || '';
+
 }
