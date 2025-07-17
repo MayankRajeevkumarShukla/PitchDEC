@@ -74,7 +74,7 @@ ANALYSIS REQUIREMENTS:
 - Consider stage-appropriate expectations (pre-seed vs Series A)
 - Flag any red flags or concerning elements
 
-IMPORTANT: Respond with VALID JSON only. No markdown, no backticks, no additional text. Start directly with { and end with }.
+CRITICAL: Respond with VALID JSON only. No markdown, no backticks, no additional text. Start directly with { and end with }. Make sure all strings are properly escaped and no line breaks exist within string values.
 
 OUTPUT FORMAT:
 {
@@ -132,7 +132,7 @@ OUTPUT FORMAT:
   }
 }
 
---- PITCH DECK CONTENT ---;
+--- PITCH DECK CONTENT ---
 
 ${sectionText}
 `
@@ -159,14 +159,67 @@ ${sectionText}
     const data = await response.json()
     const rawContent = data.choices[0].message.content
     
-    // Parse the JSON response
+    // Parse the JSON response with improved error handling
     try {
-      const parsedResult = JSON.parse(rawContent)
-      return parsedResult
+      // Clean the response before parsing
+      let cleanContent = rawContent.trim();
+      
+      // Remove markdown code blocks if present
+      cleanContent = cleanContent.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+      
+      // Find JSON object boundaries
+      const startIndex = cleanContent.indexOf('{');
+      const lastIndex = cleanContent.lastIndexOf('}');
+      
+      if (startIndex !== -1 && lastIndex !== -1 && lastIndex > startIndex) {
+        cleanContent = cleanContent.substring(startIndex, lastIndex + 1);
+      }
+      
+      // Additional cleaning for common JSON issues
+      cleanContent = cleanContent
+        .replace(/\n\s*/g, ' ')  // Replace newlines with spaces
+        .replace(/\s+/g, ' ')    // Replace multiple spaces with single space
+        .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
+        .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
+      
+      const parsedResult = JSON.parse(cleanContent);
+      return parsedResult;
     } catch (parseError) {
-      console.error("Failed to parse JSON response:", parseError)
-      console.error("Raw response:", rawContent)
-      throw new Error("Failed to parse AI response as JSON")
+      console.error("Failed to parse JSON response:", parseError);
+      console.error("Raw response:", rawContent);
+      
+      // Try to extract and fix the JSON manually
+      try {
+        let cleanContent = rawContent.trim();
+        
+        // More aggressive cleaning
+        cleanContent = cleanContent.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+        
+        // Find JSON boundaries
+        const startIndex = cleanContent.indexOf('{');
+        const lastIndex = cleanContent.lastIndexOf('}');
+        
+        if (startIndex !== -1 && lastIndex !== -1) {
+          cleanContent = cleanContent.substring(startIndex, lastIndex + 1);
+        }
+        
+        // Fix common JSON issues
+        cleanContent = cleanContent
+          .replace(/\r?\n/g, ' ')           // Replace all newlines with spaces
+          .replace(/\s+/g, ' ')             // Replace multiple spaces with single space
+          .replace(/,(\s*[}\]])/g, '$1')    // Remove trailing commas
+          .replace(/([{,])\s*"([^"]+)"\s*:\s*"([^"]*?)"\s*([,}])/g, 
+                  (match, start, key, value, end) => {
+                    // Escape quotes and newlines in string values
+                    const escapedValue = value.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                    return `${start}"${key}":"${escapedValue}"${end}`;
+                  });
+        
+        return JSON.parse(cleanContent);
+      } catch (secondParseError) {
+        console.error("Second parsing attempt failed:", secondParseError);
+        throw new Error("Failed to parse AI response as JSON");
+      }
     }
   } catch (error: any) {
     console.error("GROQ API error:", error)
