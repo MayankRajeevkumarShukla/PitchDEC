@@ -1,7 +1,7 @@
 "use server"
 
 export async function analyzePitchDeck(sections: Record<string, string>): Promise<any> {
-  const GROQ_API_KEY = "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"
+  const GROQ_API_KEY = "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"
 
   const sectionText = Object.entries(sections)
     .map(([title, content]) => `### ${title.replace(/_/g, " ").toUpperCase()}\n${content}`)
