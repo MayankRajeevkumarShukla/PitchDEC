@@ -1,6 +1,60 @@
 "use server"
 
-export async function analyzePitchDeck(sections: Record<string, string>): Promise<any> {
+// Define proper types for the analysis result
+interface SectionRating {
+  score: number;
+  weight: number;
+}
+
+interface SectionRatings {
+  problem_market: SectionRating;
+  solution_product: SectionRating;
+  business_model: SectionRating;
+  market_analysis: SectionRating;
+  traction: SectionRating;
+  team: SectionRating;
+  financials: SectionRating;
+  go_to_market: SectionRating;
+  funding_ask: SectionRating;
+}
+
+interface SectionFeedback {
+  problem_market: string;
+  solution_product: string;
+  business_model: string;
+  market_analysis: string;
+  traction: string;
+  team: string;
+  financials: string;
+  go_to_market: string;
+  funding_ask: string;
+}
+
+interface RiskAssessment {
+  execution_risk: string;
+  market_risk: string;
+  team_risk: string;
+  technology_risk: string;
+}
+
+interface DetailedFeedback {
+  strengths: string[];
+  critical_weaknesses: string[];
+  section_feedback: SectionFeedback;
+}
+
+interface PitchDeckAnalysis {
+  overall_rating: number;
+  stage_assessment: string;
+  investment_readiness: string;
+  section_ratings: SectionRatings;
+  detailed_feedback: DetailedFeedback;
+  next_steps: string[];
+  comparable_companies: string[];
+  risk_assessment: RiskAssessment;
+}
+
+export async function analyzePitchDeck(sections: Record<string, string>): Promise<PitchDeckAnalysis> {
   const GROQ_API_KEY = process.env.GROQ_API_KEY
 
   const sectionText = Object.entries(sections)
@@ -145,7 +199,7 @@ ${sectionText}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "compound-beta-mini",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
       }),
@@ -182,7 +236,7 @@ ${sectionText}
         .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
         .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
       
-      const parsedResult = JSON.parse(cleanContent);
+      const parsedResult = JSON.parse(cleanContent) as PitchDeckAnalysis;
       return parsedResult;
     } catch (parseError) {
       console.error("Failed to parse JSON response:", parseError);
@@ -209,20 +263,21 @@ ${sectionText}
           .replace(/\s+/g, ' ')             // Replace multiple spaces with single space
           .replace(/,(\s*[}\]])/g, '$1')    // Remove trailing commas
           .replace(/([{,])\s*"([^"]+)"\s*:\s*"([^"]*?)"\s*([,}])/g, 
-                  (match, start, key, value, end) => {
+                  (match: string, start: string, key: string, value: string, end: string) => {
                     // Escape quotes and newlines in string values
                     const escapedValue = value.replace(/"/g, '\\"').replace(/\n/g, '\\n');
                     return `${start}"${key}":"${escapedValue}"${end}`;
                   });
         
-        return JSON.parse(cleanContent);
+        return JSON.parse(cleanContent) as PitchDeckAnalysis;
       } catch (secondParseError) {
         console.error("Second parsing attempt failed:", secondParseError);
         throw new Error("Failed to parse AI response as JSON");
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("GROQ API error:", error)
-    throw new Error(error.message || "Failed to analyze with GROQ API")
+    const errorMessage = error instanceof Error ? error.message : "Failed to analyze with GROQ API";
+    throw new Error(errorMessage);
   }
 }
